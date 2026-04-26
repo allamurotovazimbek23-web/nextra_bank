@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nextra Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy-dark: #0A1628;
+    --navy: #112240;
+    --navy-mid: #1A3560;
+    --navy-lift: #1E4080;
+    --green: #27AE60;
+    --green-vivid: #2ECC71;
+    --green-glow: #4ADE80;
+    --teal: #1ABC9C;
+    --white: #F0F4FF;
+    --silver: #94A3B8;
+    --red: #EF4444;
+    --yellow: #FBBF24;
+    --glass: rgba(255,255,255,0.05);
+    --glass-border: rgba(255,255,255,0.10);
+    --font: 'Montserrat', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; background:var(--navy-dark); font-family:var(--font); color:var(--white); }
+
+  /* ── SCREENS ── */
+  .screen { position:fixed; inset:0; display:none; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* ── PIN SCREEN ── */
+  #pinScreen {
+    background: linear-gradient(160deg, #0A1628 0%, #112240 50%, #0A1628 100%);
+    align-items:center; justify-content:center; gap:28px;
+  }
+  .pin-logo { text-align:center; }
+  .pin-logo-circle {
+    width:90px; height:90px; border-radius:24px; margin:0 auto 16px;
+    background: linear-gradient(135deg, #27AE60, #1ABC9C);
+    display:flex; align-items:center; justify-content:center;
+    font-size:42px; font-weight:900; color:#fff;
+    box-shadow: 0 12px 40px rgba(39,174,96,0.45);
+    letter-spacing:-2px;
+  }
+  .pin-logo h1 { font-size:26px; font-weight:900; letter-spacing:-0.5px; }
+  .pin-logo h1 span { background:linear-gradient(135deg,#27AE60,#4ADE80); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .pin-logo p { font-size:11px; color:var(--silver); letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+  .pin-dots { display:flex; gap:14px; justify-content:center; }
+  .pin-dot { width:14px; height:14px; border-radius:50%; border:2px solid var(--glass-border); background:transparent; transition:all .2s; }
+  .pin-dot.filled { background:var(--green); border-color:var(--green); box-shadow:0 0 12px rgba(39,174,96,0.6); }
+  .pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:270px; }
+  .pin-key {
+    height:64px; border-radius:18px; border:1px solid var(--glass-border);
+    background:var(--glass); color:var(--white); font-family:var(--font);
+    font-size:22px; font-weight:700; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:all .15s; line-height:1; gap:2px;
+  }
+  .pin-key span.sub { font-size:8px; font-weight:600; letter-spacing:1.5px; color:var(--silver); }
+  .pin-key:active { transform:scale(0.92); background:rgba(39,174,96,0.2); border-color:var(--green); }
+  .pin-key.del { font-size:18px; }
+  .pin-key.del:active { background:rgba(239,68,68,0.15); border-color:var(--red); }
+  .pin-hint { font-size:11px; color:var(--silver); text-align:center; }
+  .pin-error { font-size:12px; color:var(--red); text-align:center; min-height:18px; }
+
+  /* ── MAIN APP ── */
+  #mainApp { background:var(--navy-dark); }
+  .topbar {
+    padding:48px 20px 12px;
+    background:var(--navy);
+    border-bottom:1px solid var(--glass-border);
+    flex-shrink:0;
+  }
+  .topbar-row { display:flex; align-items:center; justify-content:space-between; }
+  .topbar-logo { display:flex; align-items:center; gap:10px; }
+  .topbar-logo-icon {
+    width:34px; height:34px; border-radius:10px;
+    background:linear-gradient(135deg,#27AE60,#1ABC9C);
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:900; color:#fff;
+  }
+  .topbar-logo-text { font-size:15px; font-weight:800; letter-spacing:-0.3px; }
+  .topbar-logo-text span { background:linear-gradient(135deg,#27AE60,#4ADE80); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .topbar-right { display:flex; gap:8px; align-items:center; }
+  .icon-btn {
+    width:36px; height:36px; border-radius:10px; border:1px solid var(--glass-border);
+    background:var(--glass); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:16px; transition:all .2s;
+  }
+  .icon-btn:active { transform:scale(0.9); }
+  .notif-badge {
+    position:relative;
+  }
+  .notif-badge::after {
+    content:''; position:absolute; top:6px; right:6px;
+    width:8px; height:8px; border-radius:50%; background:var(--red);
+    border:2px solid var(--navy); display:none;
+  }
+  .notif-badge.has-notif::after { display:block; }
+
+  /* Content area */
+  .content { flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:80px; }
+  .content::-webkit-scrollbar { display:none; }
+
+  /* Tab content */
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* ── HOME TAB ── */
+  .balance-card {
+    margin:20px 16px 0;
+    background:linear-gradient(135deg, #1A3560, #112240);
+    border-radius:24px; padding:22px;
+    border:1px solid var(--glass-border);
+    position:relative; overflow:hidden;
+  }
+  .balance-card::before {
+    content:''; position:absolute; top:-30px; right:-30px;
+    width:130px; height:130px; border-radius:50%;
+    background:radial-gradient(circle, rgba(39,174,96,0.18), transparent);
+  }
+  .balance-card::after {
+    content:''; position:absolute; bottom:-20px; left:-20px;
+    width:90px; height:90px; border-radius:50%;
+    background:radial-gradient(circle, rgba(26,188,156,0.12), transparent);
+  }
+  .bal-label { font-size:10px; color:var(--silver); letter-spacing:2px; text-transform:uppercase; }
+  .bal-amount { font-size:32px; font-weight:900; margin:6px 0; letter-spacing:-1px; }
+  .bal-amount span { font-size:14px; font-weight:600; color:var(--silver); margin-left:4px; }
+  .bal-sub { font-size:11px; color:var(--silver); }
+  .bal-sub b { color:var(--green-glow); }
+  .quick-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:16px; }
+  .qa-btn {
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding:10px 4px; border-radius:14px;
+    background:rgba(255,255,255,0.06); border:1px solid var(--glass-border);
+    cursor:pointer; transition:all .2s; text-decoration:none; color:inherit;
+  }
+  .qa-btn:active { transform:scale(0.94); background:rgba(39,174,96,0.15); }
+  .qa-icon { font-size:20px; }
+  .qa-label { font-size:9px; font-weight:600; color:var(--silver); text-align:center; white-space:nowrap; }
+
+  /* Stats row */
+  .stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 16px 0; }
+  .stat-card {
+    background:var(--glass); border:1px solid var(--glass-border);
+    border-radius:16px; padding:14px 16px;
+  }
+  .stat-label { font-size:10px; color:var(--silver); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+  .stat-value { font-size:20px; font-weight:800; }
+  .stat-value.green { color:var(--green-glow); }
+  .stat-value.yellow { color:var(--yellow); }
+  .stat-value.red { color:var(--red); }
+  .stat-sub { font-size:10px; color:var(--silver); margin-top:3px; }
+
+  /* Section */
+  .section { margin:16px 0 0; }
+  .section-header { display:flex; justify-content:space-between; align-items:center; padding:0 16px 10px; }
+  .section-title { font-size:14px; font-weight:700; }
+  .section-link { font-size:12px; color:var(--green-glow); font-weight:600; cursor:pointer; }
+
+  /* Transaction list */
+  .txn-list { padding:0 16px; display:flex; flex-direction:column; gap:2px; }
+  .txn-item {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-radius:14px;
+    background:var(--glass); border:1px solid transparent;
+    transition:all .2s; cursor:pointer;
+  }
+  .txn-item:active { background:rgba(255,255,255,0.08); }
+  .txn-icon {
+    width:40px; height:40px; border-radius:13px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:18px;
+  }
+  .txn-info { flex:1; min-width:0; }
+  .txn-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .txn-date { font-size:11px; color:var(--silver); margin-top:2px; }
+  .txn-amount { font-size:14px; font-weight:800; text-align:right; }
+  .txn-amount.out { color:var(--red); }
+  .txn-amount.in { color:var(--green-glow); }
+  .txn-status { font-size:10px; color:var(--silver); margin-top:2px; text-align:right; }
+
+  /* ── PAYMENTS TAB ── */
+  .pay-greeting { padding:20px 16px 0; }
+  .pay-greeting h2 { font-size:20px; font-weight:800; }
+  .pay-greeting p { font-size:12px; color:var(--silver); margin-top:3px; }
+  .pay-categories { padding:0 16px; display:flex; flex-direction:column; gap:10px; }
+  .pay-cat-header { font-size:12px; color:var(--silver); letter-spacing:1px; text-transform:uppercase; margin:16px 0 6px; }
+  .pay-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .pay-item {
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:12px 4px; border-radius:16px;
+    background:var(--glass); border:1px solid var(--glass-border);
+    cursor:pointer; transition:all .2s;
+  }
+  .pay-item:active { transform:scale(0.93); border-color:var(--green); }
+  .pay-item-icon { font-size:24px; }
+  .pay-item-name { font-size:9px; font-weight:600; color:var(--silver); text-align:center; line-height:1.3; }
+
+  /* ── LOANS TAB ── */
+  .loans-top { padding:20px 16px 0; }
+  .loans-top h2 { font-size:20px; font-weight:800; }
+  .loans-top p { font-size:12px; color:var(--silver); margin-top:3px; }
+  .loan-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 16px 0; }
+  .loan-stat { background:var(--glass); border:1px solid var(--glass-border); border-radius:14px; padding:12px; text-align:center; }
+  .loan-stat-val { font-size:15px; font-weight:800; }
+  .loan-stat-val.g { color:var(--green-glow); }
+  .loan-stat-val.y { color:var(--yellow); }
+  .loan-stat-val.r { color:var(--red); }
+  .loan-stat-lbl { font-size:9px; color:var(--silver); margin-top:3px; letter-spacing:.5px; text-transform:uppercase; }
+  .add-loan-btn {
+    margin:14px 16px 0; width:calc(100% - 32px);
+    padding:14px; border-radius:16px;
+    background:linear-gradient(135deg,#27AE60,#1ABC9C);
+    border:none; color:#fff; font-family:var(--font);
+    font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 6px 20px rgba(39,174,96,0.35);
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:all .2s;
+  }
+  .add-loan-btn:active { transform:scale(0.97); }
+  .borrower-list { padding:0 16px; display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .borrower-card {
+    background:var(--glass); border:1px solid var(--glass-border);
+    border-radius:18px; padding:16px; cursor:pointer;
+    transition:all .2s; position:relative; overflow:hidden;
+  }
+  .borrower-card:active { border-color:var(--green); }
+  .bc-top { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .bc-avatar {
+    width:44px; height:44px; border-radius:14px; flex-shrink:0;
+    background:linear-gradient(135deg,#1A3560,#27AE60);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:800;
+  }
+  .bc-name { font-size:14px; font-weight:700; }
+  .bc-phone { font-size:11px; color:var(--silver); margin-top:2px; }
+  .bc-badge {
+    margin-left:auto; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700;
+  }
+  .bc-badge.active { background:rgba(39,174,96,0.2); color:var(--green-glow); border:1px solid rgba(39,174,96,0.3); }
+  .bc-badge.overdue { background:rgba(239,68,68,0.2); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+  .bc-badge.paid { background:rgba(148,163,184,0.15); color:var(--silver); border:1px solid var(--glass-border); }
+  .bc-progress-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+  .bc-progress-label { font-size:10px; color:var(--silver); }
+  .bc-progress-val { font-size:10px; font-weight:700; }
+  .bc-progress-bar { height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; }
+  .bc-progress-fill { height:100%; border-radius:3px; transition:width .4s ease; }
+  .bc-amounts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:10px; }
+  .bc-amt { background:rgba(255,255,255,0.03); border-radius:10px; padding:8px; text-align:center; }
+  .bc-amt-val { font-size:12px; font-weight:700; }
+  .bc-amt-lbl { font-size:9px; color:var(--silver); margin-top:2px; }
+
+  /* ── MORE TAB ── */
+  .more-profile { margin:20px 16px 0; background:var(--glass); border:1px solid var(--glass-border); border-radius:20px; padding:20px; display:flex; align-items:center; gap:14px; }
+  .more-avatar { width:56px; height:56px; border-radius:18px; background:linear-gradient(135deg,#27AE60,#1ABC9C); display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:900; }
+  .more-name { font-size:16px; font-weight:800; }
+  .more-role { font-size:11px; color:var(--green-glow); margin-top:3px; font-weight:600; }
+  .more-section { margin:16px 16px 0; }
+  .more-section-title { font-size:10px; color:var(--silver); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; padding:0 4px; }
+  .more-items { background:var(--glass); border:1px solid var(--glass-border); border-radius:18px; overflow:hidden; }
+  .more-item {
+    display:flex; align-items:center; gap:12px; padding:14px 16px;
+    border-bottom:1px solid var(--glass-border); cursor:pointer;
+    transition:background .2s;
+  }
+  .more-item:last-child { border-bottom:none; }
+  .more-item:active { background:rgba(255,255,255,0.06); }
+  .more-item-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .more-item-text { flex:1; font-size:13px; font-weight:600; }
+  .more-item-right { font-size:12px; color:var(--silver); }
+  .lang-btns { display:flex; gap:6px; }
+  .lang-btn { padding:4px 10px; border-radius:8px; border:1px solid var(--glass-border); background:var(--glass); color:var(--silver); font-family:var(--font); font-size:11px; font-weight:700; cursor:pointer; transition:all .2s; }
+  .lang-btn.active { background:rgba(39,174,96,0.2); border-color:var(--green); color:var(--green-glow); }
+  .logout-btn {
+    margin:16px; width:calc(100% - 32px); padding:14px; border-radius:16px;
+    background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25);
+    color:var(--red); font-family:var(--font); font-size:14px; font-weight:700;
+    cursor:pointer; transition:all .2s;
+  }
+  .logout-btn:active { transform:scale(0.97); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--navy); border-top:1px solid var(--glass-border);
+    display:flex; padding:8px 0 20px;
+    z-index:50;
+  }
+  .nav-item {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    gap:4px; cursor:pointer; transition:all .2s; padding:4px 0;
+    position:relative;
+  }
+  .nav-icon { font-size:22px; transition:transform .2s; }
+  .nav-label { font-size:9px; font-weight:600; color:var(--silver); transition:color .2s; }
+  .nav-item.active .nav-label { color:var(--green-glow); }
+  .nav-item.active .nav-icon { transform:translateY(-2px); }
+  .nav-dot { width:4px; height:4px; border-radius:50%; background:var(--green-glow); position:absolute; bottom:0; opacity:0; transition:opacity .2s; }
+  .nav-item.active .nav-dot { opacity:1; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    display:none; align-items:flex-end; z-index:200;
+    backdrop-filter:blur(6px);
+  }
+  .modal-overlay.active { display:flex; }
+  .modal {
+    background:var(--navy); border-radius:28px 28px 0 0;
+    width:100%; max-height:92vh; overflow-y:auto;
+    padding:20px 20px 36px;
+    border:1px solid var(--glass-border);
+    animation: slideUp .3s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  .modal::-webkit-scrollbar { display:none; }
+  .modal-handle { width:40px; height:4px; background:var(--glass-border); border-radius:2px; margin:0 auto 20px; }
+  .modal-title { font-size:18px; font-weight:800; margin-bottom:20px; }
+  .form-group { margin-bottom:14px; }
+  .form-label { font-size:11px; color:var(--silver); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; display:block; }
+  .form-input {
+    width:100%; padding:13px 16px; border-radius:14px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);
+    color:var(--white); font-family:var(--font); font-size:14px;
+    outline:none; transition:border-color .2s;
+  }
+  .form-input:focus { border-color:var(--green); }
+  .form-input::placeholder { color:var(--silver); opacity:0.6; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .form-select {
+    width:100%; padding:13px 16px; border-radius:14px;
+    background:rgba(255,255,255,0.05); border:1px solid var(--glass-border);
+    color:var(--white); font-family:var(--font); font-size:14px;
+    outline:none; appearance:none;
+  }
+  .form-select option { background:var(--navy); }
+  .submit-btn {
+    width:100%; padding:15px; border-radius:16px; margin-top:6px;
+    background:linear-gradient(135deg,#27AE60,#1ABC9C);
+    border:none; color:#fff; font-family:var(--font);
+    font-size:15px; font-weight:700; cursor:pointer;
+    box-shadow:0 6px 20px rgba(39,174,96,0.3);
+    transition:all .2s;
+  }
+  .submit-btn:active { transform:scale(0.97); }
+  .cancel-btn {
+    width:100%; padding:13px; border-radius:16px; margin-top:8px;
+    background:transparent; border:1px solid var(--glass-border);
+    color:var(--silver); font-family:var(--font); font-size:14px; font-weight:600; cursor:pointer;
+  }
+
+  /* Borrower detail modal */
+  .detail-section { margin-bottom:16px; }
+  .detail-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--glass-border); }
+  .detail-row:last-child { border-bottom:none; }
+  .detail-lbl { font-size:12px; color:var(--silver); }
+  .detail-val { font-size:12px; font-weight:700; }
+  .pay-input-row { display:flex; gap:8px; margin-top:8px; }
+  .pay-input-row .form-input { flex:1; }
+  .pay-input-row button { padding:0 18px; border-radius:14px; border:none; background:var(--green); color:#fff; font-family:var(--font); font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
+  .pay-input-row button:active { transform:scale(0.95); }
+  .repay-list { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; }
+  .repay-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:10px; }
+  .repay-item span:first-child { font-size:11px; color:var(--silver); }
+  .repay-item span:last-child { font-size:12px; font-weight:700; color:var(--green-glow); }
+  .delete-btn { width:100%; padding:12px; border-radius:14px; margin-top:8px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25); color:var(--red); font-family:var(--font); font-size:13px; font-weight:700; cursor:pointer; }
+
+  /* Toast */
+  .toast {
+    position:fixed; top:60px; left:50%; transform:translateX(-50%) translateY(-80px);
+    background:var(--navy-mid); border:1px solid var(--green);
+    padding:10px 20px; border-radius:12px; font-size:13px; font-weight:600;
+    color:var(--green-glow); z-index:999; transition:transform .3s ease;
+    white-space:nowrap; pointer-events:none;
+    box-shadow:0 4px 20px rgba(39,174,96,0.3);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .fade-in { animation:fadeIn .3s ease forwards; }
+
+  /* Empty state */
+  .empty-state { text-align:center; padding:40px 20px; color:var(--silver); }
+  .empty-state .emoji { font-size:48px; margin-bottom:12px; }
+  .empty-state p { font-size:13px; }
+
+  /* Scrollbar for modal */
+  .repay-list::-webkit-scrollbar { width:4px; }
+  .repay-list::-webkit-scrollbar-thumb { background:var(--glass-border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- ─── PIN SCREEN ─── -->
+<div class="screen active" id="pinScreen">
+  <div class="pin-logo">
+    <div class="pin-logo-circle">N</div>
+    <h1>NEXTRA <span>BANK</span></h1>
+    <p>Shaxsiy moliya platformasi</p>
+  </div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-error" id="pinError"></div>
+  <div class="pin-keypad" id="keypad">
+    <button class="pin-key" data-n="1">1</button>
+    <button class="pin-key" data-n="2">2<span class="sub">ABC</span></button>
+    <button class="pin-key" data-n="3">3<span class="sub">DEF</span></button>
+    <button class="pin-key" data-n="4">4<span class="sub">GHI</span></button>
+    <button class="pin-key" data-n="5">5<span class="sub">JKL</span></button>
+    <button class="pin-key" data-n="6">6<span class="sub">MNO</span></button>
+    <button class="pin-key" data-n="7">7<span class="sub">PQRS</span></button>
+    <button class="pin-key" data-n="8">8<span class="sub">TUV</span></button>
+    <button class="pin-key" data-n="9">9<span class="sub">WXYZ</span></button>
+    <button class="pin-key" style="visibility:hidden"></button>
+    <button class="pin-key" data-n="0">0</button>
+    <button class="pin-key del" id="delKey">⌫</button>
+  </div>
+  <p class="pin-hint" id="pinHint">PIN: 2005</p>
+</div>
+
+<!-- ─── MAIN APP ─── -->
+<div class="screen" id="mainApp">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-logo">
+        <div class="topbar-logo-icon">N</div>
+        <div class="topbar-logo-text">NEXTRA <span>BANK</span></div>
+      </div>
+      <div class="topbar-right">
+        <div class="icon-btn notif-badge has-notif" id="notifBtn">🔔</div>
+        <div class="icon-btn" onclick="switchTab('more')">👤</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- HOME -->
+    <div class="tab-content active" id="tab-home">
+      <div class="balance-card fade-in">
+        <div class="bal-label" data-i="total_balance">Umumiy Balans</div>
+        <div class="bal-amount" id="totalBalDisplay">0 <span>UZS</span></div>
+        <div class="bal-sub" id="balSub">Faol kreditlar: <b id="activeLoansCount">0</b></div>
+        <div class="quick-actions">
+          <div class="qa-btn" onclick="openAddLoan()">
+            <div class="qa-icon">💸</div>
+            <div class="qa-label" data-i="give_loan">Kredit ber</div>
+          </div>
+          <div class="qa-btn" onclick="switchTab('loans')">
+            <div class="qa-icon">👥</div>
+            <div class="qa-label" data-i="borrowers">Qarzdorlar</div>
+          </div>
+          <div class="qa-btn" onclick="switchTab('payments')">
+            <div class="qa-icon">💳</div>
+            <div class="qa-label" data-i="payments">To'lovlar</div>
+          </div>
+          <div class="qa-btn" onclick="openStatsModal()">
+            <div class="qa-icon">📊</div>
+            <div class="qa-label" data-i="reports">Hisobotlar</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-row fade-in">
+        <div class="stat-card">
+          <div class="stat-label" data-i="given_total">Berilgan jami</div>
+          <div class="stat-value green" id="statGiven">0</div>
+          <div class="stat-sub">UZS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-i="returned_total">Qaytib kelgan</div>
+          <div class="stat-value yellow" id="statReturned">0</div>
+          <div class="stat-sub">UZS</div>
+        </div>
+      </div>
+      <div class="stats-row fade-in" style="margin-top:8px;">
+        <div class="stat-card">
+          <div class="stat-label" data-i="remaining">Qoldiq qarz</div>
+          <div class="stat-value red" id="statRemaining">0</div>
+          <div class="stat-sub">UZS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label" data-i="profit_total">Foyda</div>
+          <div class="stat-value green" id="statProfit">0</div>
+          <div class="stat-sub">UZS</div>
+        </div>
+      </div>
+
+      <div class="section fade-in">
+        <div class="section-header">
+          <div class="section-title" data-i="recent_activity">So'nggi faoliyat</div>
+          <div class="section-link" onclick="switchTab('loans')" data-i="see_all">Barchasi</div>
+        </div>
+        <div class="txn-list" id="recentTxnList"></div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="tab-content" id="tab-payments">
+      <div class="pay-greeting" style="margin-bottom:16px;">
+        <h2 data-i="payments_title">To'lovlar</h2>
+        <p data-i="payments_sub">Xizmatlar uchun to'lovlar</p>
+      </div>
+      <div class="pay-categories" style="padding:0 16px;">
+        <div class="pay-cat-header" data-i="utilities">Kommunal xizmatlar</div>
+        <div class="pay-grid">
+          <div class="pay-item" onclick="showToast('⚡ Elektr to\'lov')"><div class="pay-item-icon">⚡</div><div class="pay-item-name" data-i="electricity">Elektr</div></div>
+          <div class="pay-item" onclick="showToast('💧 Suv to\'lov')"><div class="pay-item-icon">💧</div><div class="pay-item-name" data-i="water">Suv</div></div>
+          <div class="pay-item" onclick="showToast('🔥 Gaz to\'lov')"><div class="pay-item-icon">🔥</div><div class="pay-item-name" data-i="gas">Gaz</div></div>
+          <div class="pay-item" onclick="showToast('🌐 Internet to\'lov')"><div class="pay-item-icon">🌐</div><div class="pay-item-name" data-i="internet">Internet</div></div>
+        </div>
+        <div class="pay-cat-header" data-i="mobile">Mobil aloqa</div>
+        <div class="pay-grid">
+          <div class="pay-item" onclick="showToast('📱 Ucell to\'lov')"><div class="pay-item-icon">📱</div><div class="pay-item-name">Ucell</div></div>
+          <div class="pay-item" onclick="showToast('📡 Beeline to\'lov')"><div class="pay-item-icon">📡</div><div class="pay-item-name">Beeline</div></div>
+          <div class="pay-item" onclick="showToast('📶 UMS to\'lov')"><div class="pay-item-icon">📶</div><div class="pay-item-name">UMS</div></div>
+          <div class="pay-item" onclick="showToast('🔌 Perfectum to\'lov')"><div class="pay-item-icon">🔌</div><div class="pay-item-name">Perfectum</div></div>
+        </div>
+        <div class="pay-cat-header" data-i="government">Davlat xizmatlari</div>
+        <div class="pay-grid">
+          <div class="pay-item" onclick="showToast('🏛️ Soliq to\'lov')"><div class="pay-item-icon">🏛️</div><div class="pay-item-name" data-i="tax">Soliq</div></div>
+          <div class="pay-item" onclick="showToast('📋 Jarima to\'lov')"><div class="pay-item-icon">📋</div><div class="pay-item-name" data-i="fine">Jarima</div></div>
+          <div class="pay-item" onclick="showToast('🎓 Ta\'lim to\'lov')"><div class="pay-item-icon">🎓</div><div class="pay-item-name" data-i="education">Ta'lim</div></div>
+          <div class="pay-item" onclick="showToast('🏥 Tibbiyot to\'lov')"><div class="pay-item-icon">🏥</div><div class="pay-item-name" data-i="medical">Tibbiyot</div></div>
+        </div>
+        <div class="pay-cat-header" data-i="charity">Xayriya</div>
+        <div class="pay-grid">
+          <div class="pay-item" onclick="showToast('🤲 Xayriya')"><div class="pay-item-icon">🤲</div><div class="pay-item-name" data-i="donation">Xayriya</div></div>
+          <div class="pay-item" onclick="showToast('🕌 Masjid')"><div class="pay-item-icon">🕌</div><div class="pay-item-name" data-i="mosque">Masjid</div></div>
+          <div class="pay-item" onclick="showToast('👶 Bolalar')"><div class="pay-item-icon">👶</div><div class="pay-item-name" data-i="children">Bolalar</div></div>
+          <div class="pay-item" onclick="showToast('🌱 Ekologiya')"><div class="pay-item-icon">🌱</div><div class="pay-item-name" data-i="ecology">Ekologiya</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOANS (Products) -->
+    <div class="tab-content" id="tab-loans">
+      <div class="loans-top">
+        <h2 data-i="loans_title">Kreditlar</h2>
+        <p data-i="loans_sub">Siz — yagona investor</p>
+      </div>
+      <div class="loan-stats">
+        <div class="loan-stat">
+          <div class="loan-stat-val g" id="lsTotal">0</div>
+          <div class="loan-stat-lbl" data-i="borrowers_count">Qarzdor</div>
+        </div>
+        <div class="loan-stat">
+          <div class="loan-stat-val y" id="lsActive">0</div>
+          <div class="loan-stat-lbl" data-i="active">Faol</div>
+        </div>
+        <div class="loan-stat">
+          <div class="loan-stat-val r" id="lsOverdue">0</div>
+          <div class="loan-stat-lbl" data-i="overdue">Muddati o'tgan</div>
+        </div>
+      </div>
+      <button class="add-loan-btn" onclick="openAddLoan()">
+        <span>➕</span> <span data-i="add_borrower">Yangi Qarzdor</span>
+      </button>
+      <div class="borrower-list" id="borrowerList"></div>
+    </div>
+
+    <!-- MORE -->
+    <div class="tab-content" id="tab-more">
+      <div class="more-profile">
+        <div class="more-avatar">A</div>
+        <div>
+          <div class="more-name">Azimbek Allamurotov</div>
+          <div class="more-role" data-i="investor_role">💎 Yagona Investor</div>
+        </div>
+      </div>
+
+      <div class="more-section">
+        <div class="more-section-title" data-i="language">Til / Язык / Language</div>
+        <div class="more-items">
+          <div class="more-item">
+            <div class="more-item-icon" style="background:rgba(39,174,96,0.15);">🌐</div>
+            <div class="more-item-text" data-i="select_language">Tilni tanlang</div>
+            <div class="lang-btns">
+              <button class="lang-btn active" onclick="setLang('uz')">UZ</button>
+              <button class="lang-btn" onclick="setLang('ru')">RU</button>
+              <button class="lang-btn" onclick="setLang('en')">EN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="more-section">
+        <div class="more-section-title" data-i="security_section">Xavfsizlik</div>
+        <div class="more-items">
+          <div class="more-item" onclick="openChangePIN()">
+            <div class="more-item-icon" style="background:rgba(251,191,36,0.15);">🔐</div>
+            <div class="more-item-text" data-i="change_pin">PIN kodni o'zgartirish</div>
+            <div class="more-item-right">›</div>
+          </div>
+          <div class="more-item" onclick="showToast('🔒 Ma\'lumotlar himoyalangan')">
+            <div class="more-item-icon" style="background:rgba(96,165,250,0.15);">🛡️</div>
+            <div class="more-item-text" data-i="data_security">Ma'lumotlar xavfsizligi</div>
+            <div class="more-item-right" style="color:var(--green-glow); font-size:11px; font-weight:700;" data-i="protected">Himoyalangan</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="more-section">
+        <div class="more-section-title" data-i="data_section">Ma'lumotlar</div>
+        <div class="more-items">
+          <div class="more-item" onclick="exportData()">
+            <div class="more-item-icon" style="background:rgba(39,174,96,0.15);">📤</div>
+            <div class="more-item-text" data-i="export_data">Ma'lumotlarni export</div>
+            <div class="more-item-right">›</div>
+          </div>
+          <div class="more-item" onclick="showToast('ℹ️ Nextra Bank v1.0')">
+            <div class="more-item-icon" style="background:rgba(148,163,184,0.15);">ℹ️</div>
+            <div class="more-item-text" data-i="about">Dastur haqida</div>
+            <div class="more-item-right" style="font-size:11px;">v1.0</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="logout-btn" onclick="logout()" data-i="logout">🚪 Chiqish</button>
+    </div>
+
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="switchTab('home')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label" data-i="nav_home">Bosh sahifa</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" id="nav-payments" onclick="switchTab('payments')">
+      <div class="nav-icon">💳</div>
+      <div class="nav-label" data-i="nav_payments">To'lovlar</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" id="nav-loans" onclick="switchTab('loans')">
+      <div class="nav-icon">💰</div>
+      <div class="nav-label" data-i="nav_loans">Kreditlar</div>
+      <div class="nav-dot"></div>
+    </div>
+    <div class="nav-item" id="nav-more" onclick="switchTab('more')">
+      <div class="nav-icon">⋯</div>
+      <div class="nav-label" data-i="nav_more">Ko'proq</div>
+      <div class="nav-dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADD LOAN MODAL ─── -->
+<div class="modal-overlay" id="addLoanModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" data-i="add_borrower_title">Yangi Qarzdor Qo'shish</div>
+    <div class="form-group">
+      <label class="form-label" data-i="full_name">To'liq Ism</label>
+      <input class="form-input" id="inName" placeholder="Ismi Familiyasi" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i="phone">Telefon raqam</label>
+      <input class="form-input" id="inPhone" placeholder="+998 90 123 45 67" type="tel">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" data-i="loan_amount">Kredit miqdori (UZS)</label>
+        <input class="form-input" id="inAmount" placeholder="1 000 000" type="number">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i="interest_rate">Foiz (%)</label>
+        <input class="form-input" id="inRate" placeholder="5" type="number" value="5">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" data-i="loan_date">Berilgan sana</label>
+        <input class="form-input" id="inDate" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i="due_date">Qaytarish muddati</label>
+        <input class="form-input" id="inDue" type="date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i="purpose">Maqsad</label>
+      <input class="form-input" id="inPurpose" placeholder="Masalan: Biznes, Tibbiyot, Ta'lim..." type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i="note">Izoh (ixtiyoriy)</label>
+      <input class="form-input" id="inNote" placeholder="Qo'shimcha ma'lumot..." type="text">
+    </div>
+    <button class="submit-btn" onclick="saveLoan()" data-i="save">Saqlash</button>
+    <button class="cancel-btn" onclick="closeModal('addLoanModal')" data-i="cancel">Bekor qilish</button>
+  </div>
+</div>
+
+<!-- ─── BORROWER DETAIL MODAL ─── -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- ─── STATS MODAL ─── -->
+<div class="modal-overlay" id="statsModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" data-i="full_report">To'liq Hisobot</div>
+    <div id="statsContent"></div>
+    <button class="cancel-btn" onclick="closeModal('statsModal')" data-i="close">Yopish</button>
+  </div>
+</div>
+
+<!-- ─── CHANGE PIN MODAL ─── -->
+<div class="modal-overlay" id="changePinModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">PIN ni o'zgartirish</div>
+    <div class="form-group">
+      <label class="form-label">Joriy PIN</label>
+      <input class="form-input" id="cpCurrent" placeholder="••••" type="password" maxlength="4">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Yangi PIN</label>
+      <input class="form-input" id="cpNew" placeholder="••••" type="password" maxlength="4">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Yangi PIN (tasdiqlash)</label>
+      <input class="form-input" id="cpConfirm" placeholder="••••" type="password" maxlength="4">
+    </div>
+    <button class="submit-btn" onclick="changePIN()">O'zgartirish</button>
+    <button class="cancel-btn" onclick="closeModal('changePinModal')">Bekor qilish</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let APP = {
+  pin: localStorage.getItem('nb_pin') || '2005',
+  lang: localStorage.getItem('nb_lang') || 'uz',
+  borrowers: JSON.parse(localStorage.getItem('nb_borrowers') || '[]'),
+  balance: parseFloat(localStorage.getItem('nb_balance') || '50000000'),
+};
+let pinInput = '';
+let currentBorrowerId = null;
+
+// ─── I18N ────────────────────────────────────────────────────────────────────
+const T = {
+  uz: {
+    total_balance:'Umumiy Balans', give_loan:'Kredit ber', borrowers:'Qarzdorlar',
+    payments:'To\'lovlar', reports:'Hisobotlar', given_total:'Berilgan jami',
+    returned_total:'Qaytib kelgan', remaining:'Qoldiq qarz', profit_total:'Foyda',
+    recent_activity:'So\'nggi faoliyat', see_all:'Barchasi',
+    payments_title:'To\'lovlar', payments_sub:'Xizmatlar uchun to\'lovlar',
+    utilities:'Kommunal xizmatlar', mobile:'Mobil aloqa', government:'Davlat xizmatlari',
+    charity:'Xayriya', electricity:'Elektr', water:'Suv', gas:'Gaz', internet:'Internet',
+    tax:'Soliq', fine:'Jarima', education:'Ta\'lim', medical:'Tibbiyot',
+    donation:'Xayriya', mosque:'Masjid', children:'Bolalar', ecology:'Ekologiya',
+    loans_title:'Kreditlar', loans_sub:'Siz — yagona investor',
+    borrowers_count:'Qarzdor', active:'Faol', overdue:'Muddati o\'tgan',
+    add_borrower:'Yangi Qarzdor', investor_role:'💎 Yagona Investor',
+    language:'Til / Язык / Language', select_language:'Tilni tanlang',
+    security_section:'Xavfsizlik', change_pin:'PIN kodni o\'zgartirish',
+    data_security:'Ma\'lumotlar xavfsizligi', protected:'Himoyalangan',
+    data_section:'Ma\'lumotlar', export_data:'Ma\'lumotlarni export',
+    about:'Dastur haqida', logout:'🚪 Chiqish',
+    nav_home:'Bosh sahifa', nav_payments:'To\'lovlar', nav_loans:'Kreditlar', nav_more:'Ko\'proq',
+    add_borrower_title:'Yangi Qarzdor Qo\'shish', full_name:'To\'liq Ism',
+    phone:'Telefon raqam', loan_amount:'Kredit miqdori (UZS)', interest_rate:'Foiz (%)',
+    loan_date:'Berilgan sana', due_date:'Qaytarish muddati', purpose:'Maqsad',
+    note:'Izoh (ixtiyoriy)', save:'Saqlash', cancel:'Bekor qilish',
+    full_report:'To\'liq Hisobot', close:'Yopish',
+    status_active:'Faol', status_overdue:'Muddati o\'tgan', status_paid:'To\'langan',
+    repayments:'To\'lovlar tarixi', add_repayment:'To\'lov qo\'shish',
+    amount_label:'Miqdor', date_label:'Sana', delete_borrower:'Qarzdorni o\'chirish',
+    loan_info:'Kredit ma\'lumotlari', confirm_delete:'Rostdan ham o\'chirasizmi?',
+  },
+  ru: {
+    total_balance:'Общий баланс', give_loan:'Выдать кредит', borrowers:'Должники',
+    payments:'Платежи', reports:'Отчёты', given_total:'Выдано всего',
+    returned_total:'Возвращено', remaining:'Остаток долга', profit_total:'Прибыль',
+    recent_activity:'Последняя активность', see_all:'Все',
+    payments_title:'Платежи', payments_sub:'Оплата услуг',
+    utilities:'Коммунальные услуги', mobile:'Мобильная связь', government:'Госуслуги',
+    charity:'Благотворительность', electricity:'Электричество', water:'Вода', gas:'Газ', internet:'Интернет',
+    tax:'Налог', fine:'Штраф', education:'Образование', medical:'Медицина',
+    donation:'Пожертвование', mosque:'Мечеть', children:'Дети', ecology:'Экология',
+    loans_title:'Кредиты', loans_sub:'Вы — единственный инвестор',
+    borrowers_count:'Должников', active:'Активных', overdue:'Просрочено',
+    add_borrower:'Новый должник', investor_role:'💎 Единственный инвестор',
+    language:'Til / Язык / Language', select_language:'Выберите язык',
+    security_section:'Безопасность', change_pin:'Изменить PIN-код',
+    data_security:'Безопасность данных', protected:'Защищено',
+    data_section:'Данные', export_data:'Экспорт данных',
+    about:'О приложении', logout:'🚪 Выйти',
+    nav_home:'Главная', nav_payments:'Платежи', nav_loans:'Кредиты', nav_more:'Ещё',
+    add_borrower_title:'Добавить должника', full_name:'Полное имя',
+    phone:'Номер телефона', loan_amount:'Сумма кредита (UZS)', interest_rate:'Процент (%)',
+    loan_date:'Дата выдачи', due_date:'Дата погашения', purpose:'Назначение',
+    note:'Примечание (необязательно)', save:'Сохранить', cancel:'Отмена',
+    full_report:'Полный отчёт', close:'Закрыть',
+    status_active:'Активный', status_overdue:'Просрочен', status_paid:'Оплачено',
+    repayments:'История платежей', add_repayment:'Добавить платёж',
+    amount_label:'Сумма', date_label:'Дата', delete_borrower:'Удалить должника',
+    loan_info:'Информация о кредите', confirm_delete:'Действительно удалить?',
+  },
+  en: {
+    total_balance:'Total Balance', give_loan:'Give Loan', borrowers:'Borrowers',
+    payments:'Payments', reports:'Reports', given_total:'Total Given',
+    returned_total:'Returned', remaining:'Outstanding', profit_total:'Profit',
+    recent_activity:'Recent Activity', see_all:'See All',
+    payments_title:'Payments', payments_sub:'Pay for services',
+    utilities:'Utilities', mobile:'Mobile', government:'Government', charity:'Charity',
+    electricity:'Electricity', water:'Water', gas:'Gas', internet:'Internet',
+    tax:'Tax', fine:'Fine', education:'Education', medical:'Medical',
+    donation:'Donation', mosque:'Mosque', children:'Children', ecology:'Ecology',
+    loans_title:'Loans', loans_sub:'You are the sole investor',
+    borrowers_count:'Borrowers', active:'Active', overdue:'Overdue',
+    add_borrower:'New Borrower', investor_role:'💎 Sole Investor',
+    language:'Til / Язык / Language', select_language:'Select Language',
+    security_section:'Security', change_pin:'Change PIN',
+    data_security:'Data Security', protected:'Protected',
+    data_section:'Data', export_data:'Export Data',
+    about:'About', logout:'🚪 Logout',
+    nav_home:'Home', nav_payments:'Payments', nav_loans:'Loans', nav_more:'More',
+    add_borrower_title:'Add New Borrower', full_name:'Full Name',
+    phone:'Phone Number', loan_amount:'Loan Amount (UZS)', interest_rate:'Interest (%)',
+    loan_date:'Issue Date', due_date:'Due Date', purpose:'Purpose',
+    note:'Note (optional)', save:'Save', cancel:'Cancel',
+    full_report:'Full Report', close:'Close',
+    status_active:'Active', status_overdue:'Overdue', status_paid:'Paid',
+    repayments:'Payment History', add_repayment:'Add Payment',
+    amount_label:'Amount', date_label:'Date', delete_borrower:'Delete Borrower',
+    loan_info:'Loan Information', confirm_delete:'Really delete?',
+  }
+};
+
+function t(key) { return (T[APP.lang] && T[APP.lang][key]) || key; }
+
+function applyLang() {
+  document.querySelectorAll('[data-i]').forEach(el => {
+    const key = el.getAttribute('data-i');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.onclick.toString().includes(`'${APP.lang}'`));
+  });
+}
+
+function setLang(l) {
+  APP.lang = l;
+  localStorage.setItem('nb_lang', l);
+  applyLang();
+  renderAll();
+  showToast('🌐 ' + {uz:'Uzbek', ru:'Русский', en:'English'}[l]);
+}
+
+// ─── PIN ──────────────────────────────────────────────────────────────────────
+document.getElementById('keypad').addEventListener('click', e => {
+  const btn = e.target.closest('.pin-key');
+  if (!btn) return;
+  const n = btn.getAttribute('data-n');
+  if (n !== null && pinInput.length < 4) {
+    pinInput += n;
+    updateDots();
+    if (pinInput.length === 4) setTimeout(checkPin, 150);
+  }
+});
+document.getElementById('delKey').addEventListener('click', () => {
+  pinInput = pinInput.slice(0,-1);
+  updateDots();
+  document.getElementById('pinError').textContent = '';
+});
+function updateDots() {
+  for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled', i < pinInput.length);
+}
+function checkPin() {
+  if (pinInput === APP.pin) {
+    document.getElementById('pinScreen').classList.remove('active');
+    document.getElementById('mainApp').classList.add('active');
+    applyLang();
+    renderAll();
+    document.getElementById('pinHint').style.display = 'none';
+  } else {
+    document.getElementById('pinError').textContent = '❌ Noto\'g\'ri PIN. Qayta urinib ko\'ring.';
+    pinInput = '';
+    updateDots();
+    document.getElementById('pinScreen').style.animation = 'none';
+    setTimeout(() => document.getElementById('pinScreen').style.animation = '', 10);
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  if (tab === 'loans') renderBorrowers();
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderRecent();
+  renderBorrowers();
+}
+
+function fmtNum(n) {
+  return Math.round(n).toLocaleString('uz-UZ');
+}
+
+function calcLoanStats() {
+  let given = 0, returned = 0, remaining = 0, profit = 0, active = 0, overdue = 0;
+  const now = new Date();
+  APP.borrowers.forEach(b => {
+    const principal = parseFloat(b.amount) || 0;
+    const interest = principal * (parseFloat(b.rate) || 0) / 100;
+    const total = principal + interest;
+    const paid = (b.repayments || []).reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+    const rem = Math.max(0, total - paid);
+    given += principal;
+    returned += paid;
+    remaining += rem;
+    if (rem > 0) {
+      const due = b.due ? new Date(b.due) : null;
+      if (due && due < now) overdue++;
+      else active++;
+    }
+    if (paid > principal) profit += paid - principal;
+  });
+  return { given, returned, remaining, profit, active, overdue, total: APP.borrowers.length };
+}
+
+function renderStats() {
+  const s = calcLoanStats();
+  document.getElementById('totalBalDisplay').innerHTML = fmtNum(APP.balance) + ' <span>UZS</span>';
+  document.getElementById('activeLoansCount').textContent = s.active;
+  document.getElementById('statGiven').textContent = fmtNum(s.given);
+  document.getElementById('statReturned').textContent = fmtNum(s.returned);
+  document.getElementById('statRemaining').textContent = fmtNum(s.remaining);
+  document.getElementById('statProfit').textContent = fmtNum(s.profit);
+  const ls = calcLoanStats();
+  document.getElementById('lsTotal').textContent = ls.total;
+  document.getElementById('lsActive').textContent = ls.active;
+  document.getElementById('lsOverdue').textContent = ls.overdue;
+}
+
+function getBorrowerStatus(b) {
+  const principal = parseFloat(b.amount)||0;
+  const interest = principal*(parseFloat(b.rate)||0)/100;
+  const total = principal + interest;
+  const paid = (b.repayments||[]).reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  if (paid >= total) return 'paid';
+  const due = b.due ? new Date(b.due) : null;
+  if (due && due < new Date()) return 'overdue';
+  return 'active';
+}
+
+function renderRecent() {
+  const list = document.getElementById('recentTxnList');
+  if (!APP.borrowers.length) {
+    list.innerHTML = `<div class="empty-state"><div class="emoji">💸</div><p>${t('give_loan')}</p></div>`;
+    return;
+  }
+  const items = APP.borrowers.slice().reverse().slice(0, 5);
+  list.innerHTML = items.map(b => {
+    const st = getBorrowerStatus(b);
+    const stMap = {active:'🟢', overdue:'🔴', paid:'✅'};
+    return `<div class="txn-item" onclick="openDetail('${b.id}')">
+      <div class="txn-icon" style="background:rgba(39,174,96,0.15);">${stMap[st]}</div>
+      <div class="txn-info">
+        <div class="txn-name">${b.name}</div>
+        <div class="txn-date">${b.date || ''} · ${b.purpose || ''}</div>
+      </div>
+      <div>
+        <div class="txn-amount out">-${fmtNum(b.amount)}</div>
+        <div class="txn-status" style="color:${st==='overdue'?'var(--red)':st==='paid'?'var(--silver)':'var(--green-glow)'}">
+          ${t('status_'+st)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBorrowers() {
+  const list = document.getElementById('borrowerList');
+  if (!APP.borrowers.length) {
+    list.innerHTML = `<div class="empty-state"><div class="emoji">👥</div><p>${t('add_borrower')}</p></div>`;
+    return;
+  }
+  list.innerHTML = APP.borrowers.map(b => {
+    const principal = parseFloat(b.amount)||0;
+    const interest = principal*(parseFloat(b.rate)||0)/100;
+    const total = principal + interest;
+    const paid = (b.repayments||[]).reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+    const pct = total > 0 ? Math.min(100, (paid/total)*100) : 0;
+    const rem = Math.max(0, total - paid);
+    const st = getBorrowerStatus(b);
+    const barColor = st==='paid'?'var(--silver)':st==='overdue'?'var(--red)':'var(--green)';
+    const initials = b.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    return `<div class="borrower-card fade-in" onclick="openDetail('${b.id}')">
+      <div class="bc-top">
+        <div class="bc-avatar">${initials}</div>
+        <div>
+          <div class="bc-name">${b.name}</div>
+          <div class="bc-phone">${b.phone || ''}</div>
+        </div>
+        <div class="bc-badge ${st}">${t('status_'+st)}</div>
+      </div>
+      <div class="bc-progress-row">
+        <span class="bc-progress-label">${t('remaining')}: ${fmtNum(rem)} UZS</span>
+        <span class="bc-progress-val">${Math.round(pct)}%</span>
+      </div>
+      <div class="bc-progress-bar">
+        <div class="bc-progress-fill" style="width:${pct}%;background:${barColor};"></div>
+      </div>
+      <div class="bc-amounts">
+        <div class="bc-amt"><div class="bc-amt-val" style="color:var(--silver)">${fmtNum(principal)}</div><div class="bc-amt-lbl">${t('loan_amount').replace(' (UZS)','')}</div></div>
+        <div class="bc-amt"><div class="bc-amt-val" style="color:var(--green-glow)">${fmtNum(paid)}</div><div class="bc-amt-lbl">${t('returned_total')}</div></div>
+        <div class="bc-amt"><div class="bc-amt-val" style="color:${st==='overdue'?'var(--red)':'var(--yellow)'}">${fmtNum(rem)}</div><div class="bc-amt-lbl">${t('remaining')}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── ADD LOAN ─────────────────────────────────────────────────────────────────
+function openAddLoan() {
+  const today = new Date().toISOString().slice(0,10);
+  const next = new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0,10);
+  document.getElementById('inName').value = '';
+  document.getElementById('inPhone').value = '';
+  document.getElementById('inAmount').value = '';
+  document.getElementById('inRate').value = '5';
+  document.getElementById('inDate').value = today;
+  document.getElementById('inDue').value = next;
+  document.getElementById('inPurpose').value = '';
+  document.getElementById('inNote').value = '';
+  applyLang();
+  document.getElementById('addLoanModal').classList.add('active');
+}
+
+function saveLoan() {
+  const name = document.getElementById('inName').value.trim();
+  const phone = document.getElementById('inPhone').value.trim();
+  const amount = parseFloat(document.getElementById('inAmount').value);
+  if (!name) { showToast('❗ Ism kiriting'); return; }
+  if (!amount || amount <= 0) { showToast('❗ Miqdor kiriting'); return; }
+  const loan = {
+    id: Date.now().toString(),
+    name, phone, amount,
+    rate: parseFloat(document.getElementById('inRate').value) || 0,
+    date: document.getElementById('inDate').value,
+    due: document.getElementById('inDue').value,
+    purpose: document.getElementById('inPurpose').value.trim(),
+    note: document.getElementById('inNote').value.trim(),
+    repayments: [],
+    createdAt: new Date().toISOString(),
+  };
+  APP.borrowers.push(loan);
+  save();
+  closeModal('addLoanModal');
+  renderAll();
+  showToast('✅ ' + name + ' qo\'shildi');
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function openDetail(id) {
+  currentBorrowerId = id;
+  const b = APP.borrowers.find(x => x.id === id);
+  if (!b) return;
+  const principal = parseFloat(b.amount)||0;
+  const interest = principal*(parseFloat(b.rate)||0)/100;
+  const total = principal + interest;
+  const paid = (b.repayments||[]).reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  const rem = Math.max(0, total - paid);
+  const st = getBorrowerStatus(b);
+  const pct = total>0?Math.min(100,(paid/total)*100):0;
+  const barColor = st==='paid'?'var(--silver)':st==='overdue'?'var(--red)':'var(--green)';
+
+  const repayRows = (b.repayments||[]).slice().reverse().map(r =>
+    `<div class="repay-item"><span>${r.date}</span><span>+${fmtNum(r.amount)} UZS</span></div>`
+  ).join('') || `<div style="color:var(--silver);font-size:12px;padding:10px 0;">${t('repayments')} yo'q</div>`;
+
+  document.getElementById('detailContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#1A3560,#27AE60);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;">
+        ${b.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()}
+      </div>
+      <div>
+        <div style="font-size:17px;font-weight:800;">${b.name}</div>
+        <div style="font-size:12px;color:var(--silver);">${b.phone||''}</div>
+      </div>
+      <div class="bc-badge ${st}" style="margin-left:auto;">${t('status_'+st)}</div>
+    </div>
+
+    <div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;padding:16px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;color:var(--silver);">${t('remaining')}: ${fmtNum(rem)} UZS</span>
+        <span style="font-size:11px;font-weight:700;">${Math.round(pct)}%</span>
+      </div>
+      <div class="bc-progress-bar"><div class="bc-progress-fill" style="width:${pct}%;background:${barColor};"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;text-align:center;">
+        <div><div style="font-size:13px;font-weight:800;color:var(--silver)">${fmtNum(principal)}</div><div style="font-size:9px;color:var(--silver)">Asosiy</div></div>
+        <div><div style="font-size:13px;font-weight:800;color:var(--green-glow)">${fmtNum(paid)}</div><div style="font-size:9px;color:var(--silver)">To'landi</div></div>
+        <div><div style="font-size:13px;font-weight:800;color:${st==='overdue'?'var(--red)':'var(--yellow)'}">${fmtNum(rem)}</div><div style="font-size:9px;color:var(--silver)">Qoldi</div></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-row"><span class="detail-lbl">${t('interest_rate')}</span><span class="detail-val">${b.rate}%</span></div>
+      <div class="detail-row"><span class="detail-lbl">${t('loan_date')}</span><span class="detail-val">${b.date||'—'}</span></div>
+      <div class="detail-row"><span class="detail-lbl">${t('due_date')}</span><span class="detail-val">${b.due||'—'}</span></div>
+      <div class="detail-row"><span class="detail-lbl">${t('purpose')}</span><span class="detail-val">${b.purpose||'—'}</span></div>
+      ${b.note?`<div class="detail-row"><span class="detail-lbl">${t('note')}</span><span class="detail-val" style="max-width:60%;text-align:right;font-size:11px;">${b.note}</span></div>`:''}
+    </div>
+
+    <div style="font-size:12px;font-weight:700;margin-bottom:10px;">${t('add_repayment')}</div>
+    <div class="pay-input-row">
+      <input class="form-input" id="repayAmt" placeholder="Miqdor (UZS)" type="number">
+      <button onclick="addRepayment()">✓ ${t('save')}</button>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;margin:14px 0 8px;">${t('repayments')}</div>
+    <div class="repay-list">${repayRows}</div>
+
+    <button class="delete-btn" onclick="deleteBorrower('${b.id}')">🗑️ ${t('delete_borrower')}</button>
+    <button class="cancel-btn" onclick="closeModal('detailModal')" style="margin-top:8px;">${t('close')}</button>
+  `;
+  document.getElementById('detailModal').classList.add('active');
+}
+
+function addRepayment() {
+  const amt = parseFloat(document.getElementById('repayAmt').value);
+  if (!amt || amt <= 0) { showToast('❗ Miqdor kiriting'); return; }
+  const b = APP.borrowers.find(x => x.id === currentBorrowerId);
+  if (!b) return;
+  b.repayments = b.repayments || [];
+  b.repayments.push({ amount: amt, date: new Date().toISOString().slice(0,10) });
+  save();
+  closeModal('detailModal');
+  renderAll();
+  showToast('✅ To\'lov qo\'shildi: ' + fmtNum(amt) + ' UZS');
+}
+
+function deleteBorrower(id) {
+  if (!confirm(t('confirm_delete'))) return;
+  APP.borrowers = APP.borrowers.filter(x => x.id !== id);
+  save();
+  closeModal('detailModal');
+  renderAll();
+  showToast('🗑️ O\'chirildi');
+}
+
+// ─── STATS MODAL ──────────────────────────────────────────────────────────────
+function openStatsModal() {
+  const s = calcLoanStats();
+  document.getElementById('statsContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      ${[
+        ['Jami berilgan', fmtNum(s.given)+' UZS', 'var(--silver)'],
+        ['Qaytib kelgan', fmtNum(s.returned)+' UZS', 'var(--green-glow)'],
+        ['Qoldiq qarz', fmtNum(s.remaining)+' UZS', 'var(--red)'],
+        ['Sof foyda', fmtNum(s.profit)+' UZS', 'var(--yellow)'],
+        ['Jami qarzdor', s.total+' kishi', 'var(--white)'],
+        ['Faol', s.active+' ta', 'var(--green-glow)'],
+        ['Muddati o\'tgan', s.overdue+' ta', 'var(--red)'],
+        ['To\'langan', (s.total-s.active-s.overdue)+' ta', 'var(--silver)'],
+      ].map(([l,v,c])=>`<div style="background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:14px;">
+        <div style="font-size:10px;color:var(--silver);margin-bottom:6px;">${l}</div>
+        <div style="font-size:16px;font-weight:800;color:${c};">${v}</div>
+      </div>`).join('')}
+    </div>
+    ${APP.borrowers.length===0?`<div class="empty-state"><div class="emoji">📊</div><p>Ma'lumot yo'q</p></div>`:''}
+  `;
+  document.getElementById('statsModal').classList.add('active');
+}
+
+// ─── CHANGE PIN ───────────────────────────────────────────────────────────────
+function openChangePIN() {
+  document.getElementById('cpCurrent').value = '';
+  document.getElementById('cpNew').value = '';
+  document.getElementById('cpConfirm').value = '';
+  closeModal('detailModal');
+  document.getElementById('changePinModal').classList.add('active');
+}
+function changePIN() {
+  const cur = document.getElementById('cpCurrent').value;
+  const nw = document.getElementById('cpNew').value;
+  const cf = document.getElementById('cpConfirm').value;
+  if (cur !== APP.pin) { showToast('❌ Joriy PIN noto\'g\'ri'); return; }
+  if (nw.length < 4) { showToast('❗ PIN kamida 4 ta raqam'); return; }
+  if (nw !== cf) { showToast('❗ PIN lar mos kelmadi'); return; }
+  APP.pin = nw;
+  localStorage.setItem('nb_pin', nw);
+  closeModal('changePinModal');
+  showToast('✅ PIN muvaffaqiyatli o\'zgartirildi');
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if(e.target===ov) ov.classList.remove('active'); });
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function save() {
+  localStorage.setItem('nb_borrowers', JSON.stringify(APP.borrowers));
+  localStorage.setItem('nb_balance', APP.balance.toString());
+}
+
+function logout() {
+  if (!confirm('Chiqishni xohlaysizmi?')) return;
+  pinInput = '';
+  updateDots();
+  document.getElementById('mainApp').classList.remove('active');
+  document.getElementById('pinScreen').classList.add('active');
+  document.getElementById('pinHint').style.display = 'block';
+}
+
+function exportData() {
+  const data = {
+    exportDate: new Date().toISOString(),
+    owner: 'Azimbek Allamurotov',
+    app: 'Nextra Bank v1.0',
+    stats: calcLoanStats(),
+    borrowers: APP.borrowers,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'nextra-bank-export-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📤 Export tayyor');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('inDate') && (document.getElementById('inDate').value = new Date().toISOString().slice(0,10));
+applyLang();
+</script>
+</body>
+</html>
